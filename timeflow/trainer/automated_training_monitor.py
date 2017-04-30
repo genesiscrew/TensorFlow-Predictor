@@ -80,7 +80,7 @@ class AutomatedTrainingMonitor:
         if self.early_stopping_rounds is not None:
             current_value = float(self.sess.run(self.cost,feed_dict={self.input_var:self.validation_input,
                                                                      self.output_var:self.validation_output}))
-            if (self._best_value is None or current_value < self._best_value):
+            if (self._best_value is None or curre3nt_value < self._best_value):
                 self._best_value = current_value
                 self._best_value_step = step
             stop_now = (step - self._best_value_step >= self.early_stopping_rounds)
