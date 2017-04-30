@@ -72,7 +72,7 @@ def create_dataset3(dataset, training_length,look_back):
     # go through through array untill point minus lookback plus
     for i in range((training_length-35), (len(dataset) - look_back - 1 - 5 - 35)):
         print(i)
-        a = dataset[i+10:(i + look_back+10)]
+        a = dataset[i:(i + look_back)]
         dataX.append(a)
     return np.array(dataX)
 
@@ -120,18 +120,25 @@ Y_test = np.reshape(Y_test,(len(Y_test), 1))
 #plt.show()
 
 input_size = 30
-hidden_size = 6
-hidden_size2 = 25
+hidden_size = 3
+hidden_size2 = 3
+hidden_size3 = 3
+hidden_size4 = 3
+hidden_size5 = 3
 output_size = 1
 
 inputs = tflow.placeholders.prediction.input_placeholder(input_size)
 input_lstm_layer = tflow.layers.InputLSTMLayer(inputs, input_size)
-lstm_layer = tflow.layers.LSTMLayer(input_size, hidden_size, input_lstm_layer)
-#lstm_layer2 = tflow.layers.LSTMLayer(hidden_size, hidden_size, lstm_layer)
-reg_layer = tflow.layers.RegressionLayer(hidden_size, output_size, lstm_layer)
+lstm_layer = tflow.layers.LSTMLayer(input_size, input_size, input_lstm_layer)
+outlstm_layer1 = tflow.layers.OutputLSTMLayer(input_size, lstm_layer, batch_output=True)
+#reg_layer = tflow.layers.RegressionLayer(hidden_size, hidden_size2, lstm_layer)
+input_lstm_layer2 = tflow.layers.InputLSTMLayer(inputs, input_size)
+lstm_layer2 = tflow.layers.LSTMLayer(hidden_size2, output_size, input_lstm_layer2)
+#outlstm_layer2 = tflow.layers.OutputLSTMLayer(output_size, lstm_layer2, batch_output=False)
+
 #nn_layer = tflow.layers.MultiNNLayer(hidden_size, output_size, lstm_layer,
    #                                          layers=2, layer_size=[10, 10], func='sigmoid', outfunc='regression')
-output_layer = tflow.layers.OutputLSTMLayer(output_size, reg_layer)
+output_layer = tflow.layers.OutputLSTMLayer(output_size, outlstm_layer1)
 
 y = tflow.placeholders.prediction.output_placeholder(output_size)
 
@@ -152,9 +159,9 @@ sess = tf.InteractiveSession()
 sess.run(tf.global_variables_initializer())
 
 monitor = AutomatedTrainingMonitor(inputs, y, X_train, Y_train,
-                                   train_step, loss_func, sess, training_steps=300,
+                                   train_step, loss_func, sess, training_steps=500,
                                    validation_input=X_test, validation_output=Y_test,
-                                   early_stopping_rounds=10)
+                                   early_stopping_rounds=60)
 
 monitor.train()
 
