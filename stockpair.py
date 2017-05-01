@@ -36,7 +36,7 @@ data['price']  # as a Series
 data['price'].values
 
 
-samples = data['price'].values[2400:3601]
+samples = data['price'].values[1200:2401]
 samples = samples.astype('float32')
 look_back = 30
 prediction_lag = 60
@@ -178,7 +178,7 @@ sess = tf.InteractiveSession()
 sess.run(tf.global_variables_initializer())
 
 monitor = AutomatedTrainingMonitor(inputs, y, X_train, Y_train,
-                                   train_step, loss_func, sess, training_steps=1,
+                                   train_step, loss_func, sess, training_steps=100,
                                    validation_input=X_test, validation_output=Y_test,
                                    early_stopping_rounds=10)
 
@@ -211,13 +211,13 @@ for i in range(len(Y_test)-1-15):
     y1 = np.array(buy_data).reshape(len(buy_data), 1)
     print(len(buy_data), len(time_interval))
     regr.fit(x1, y1)
-    print('Coefficients: \n', regr.coef_)
-    regr.s
+    print('Coefficients: \n', regr.coef_[0][0])
+    slope_buy = regr.coef_[0][0]
     print("interval data")
 
     pipSecure = 0.0004
     if ((output[i][0] - pipSecure) > X_test[i][look_back-1]) or ((output[i][0] + pipSecure) < X_test[i][look_back-1]):
-        if (Y_test[i] > X_test[i][look_back-1] and (output[i][0]-pipSecure) > X_test[i][look_back-1]) or (Y_test[i] < X_test[i][look_back-1] and (output[i][0]+pipSecure) < X_test[i][look_back-1]):
+        if (Y_test[i] > X_test[i][look_back-1] and (output[i][0]-pipSecure > X_test[i][look_back-1] or slope_buy > 0)) or (Y_test[i] < X_test[i][look_back-1] and (output[i][0]+pipSecure < X_test[i][look_back-1] or slope_buy < 0)):
          win = win + 1
          numTrades = numTrades + 1
         else:
