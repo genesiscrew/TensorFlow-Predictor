@@ -34,8 +34,10 @@ data['price']  # as a Series
 data['price'].values
 
 
-samples = data['price'].values[:1201]
+samples = data['price'].values[1200:2401]
 samples = samples.astype('float32')
+look_back = 30
+prediction_lag = 60
 
 
 
@@ -46,19 +48,21 @@ samples = scaler.fit_transform(samples)
 
 
 
+
+
 # convert an array of values into a dataset matrix
 def create_dataset(dataset, look_back):
     dataX, dataY = [], []
-    for i in range(len(dataset)-look_back-1-5):
+    for i in range(len(dataset)-look_back-1-prediction_lag):
         a = dataset[i:(i+look_back)]
         dataX.append(a)
-        dataY.append(dataset[i + (look_back+5)])
+        dataY.append(dataset[i + (look_back+prediction_lag)])
     return np.array(dataX), np.array(dataY)
 
 # convert an array of values into a Y-test matrix
 def create_dataset2(dataset, look_back):
     dataY = []
-    for i in range(len(dataset)-1-look_back-5):
+    for i in range(len(dataset)-1-look_back - prediction_lag):
         dataY.append(dataset[i])
 
 
@@ -70,9 +74,8 @@ def create_dataset3(dataset, training_length,look_back):
     dataX = []
     # we look back into data by size of lookback plus prediction target, then we
     # go through through array untill point minus lookback plus
-    for i in range((training_length-35), (len(dataset) - look_back - 1 - 5 - 35)):
-        print(i)
-        a = dataset[i:(i + look_back)]
+    for i in range((training_length-(look_back+prediction_lag)), (len(dataset) - look_back - 1 - prediction_lag -(prediction_lag+look_back))):
+        a = dataset[i+(2*prediction_lag):(i + look_back+(2*prediction_lag))]
         dataX.append(a)
     return np.array(dataX)
 
@@ -120,24 +123,24 @@ Y_test = np.reshape(Y_test,(len(Y_test), 1))
 #plt.show()
 
 input_size = 30
-hidden_size = 3
-hidden_size2 = 3
-hidden_size3 = 3
-hidden_size4 = 3
-hidden_size5 = 3
+hidden_size = 10
+hidden_size2 = 10
+hidden_size3 = 10
+hidden_size4 = 10
+hidden_size5 = 10
 output_size = 1
 
 inputs = tflow.placeholders.prediction.input_placeholder(input_size)
 input_lstm_layer = tflow.layers.InputLSTMLayer(inputs, input_size)
-lstm_layer = tflow.layers.LSTMLayer(input_size, input_size, input_lstm_layer)
-outlstm_layer1 = tflow.layers.OutputLSTMLayer(hidden_size, lstm_layer, batch_output=True)
-#reg_layer = tflow.layers.RegressionLayer(hidden_size, hidden_size2, lstm_layer)
-input_lstm_layer2 = tflow.layers.InputLSTMLayer(outlstm_layer1.get_outputs(), hidden_size)
-lstm_layer2 = tflow.layers.LSTMLayer(hidden_size2, output_size, input_lstm_layer2)
+lstm_layer = tflow.layers.LSTMLayer(input_size, hidden_size, input_lstm_layer)
+#outlstm_layer1 = tflow.layers.OutputLSTMLayer(hidden_size, lstm_layer, batch_output=False)
+reg_layer = tflow.layers.RegressionLayer(hidden_size, output_size, lstm_layer)
+#input_lstm_layer2 = tflow.layers.InputLSTMLayer(outlstm_layer1.get_outputs(), hidden_size)
+#lstm_layer2 = tflow.layers.LSTMLayer(hidden_size2, output_size, input_lstm_layer2)
 
 #nn_layer = tflow.layers.MultiNNLayer(hidden_size, output_size, lstm_layer,
    #                                          layers=2, layer_size=[10, 10], func='sigmoid', outfunc='regression')
-output_layer = tflow.layers.OutputLSTMLayer(output_size, outlstm_layer1)
+output_layer = tflow.layers.OutputLSTMLayer(output_size, reg_layer)
 
 y = tflow.placeholders.prediction.output_placeholder(output_size)
 
@@ -158,7 +161,7 @@ sess = tf.InteractiveSession()
 sess.run(tf.global_variables_initializer())
 
 monitor = AutomatedTrainingMonitor(inputs, y, X_train, Y_train,
-                                   train_step, loss_func, sess, training_steps=200,
+                                   train_step, loss_func, sess, training_steps=100,
                                    validation_input=X_test, validation_output=Y_test,
                                    early_stopping_rounds=10)
 
@@ -167,6 +170,7 @@ monitor.train()
 output = sess.run(outputs,feed_dict={inputs:X_test})
 output = scaler.inverse_transform(output)
 Y_test = scaler.inverse_transform(Y_test)
+X_test = scaler.inverse_transform(X_test)
 #fig1 = plt.figure()
 #ax1 = fig1.add_subplot(211)
 plt.plot( output, label = 'Predicted')
@@ -177,5 +181,23 @@ plt.legend()
 plt.xlabel('Time')
 plt.ylabel('Magintude')
 plt.title('Test set predictions');
-print("prediction complete")
+win = 0;
+loss = 0
+numTrades = 0
+for i in range(len(Y_test)-1):
+    #print(output[i])
+    pipSecure = 0.0004
+    if ((output[i][0] - pipSecure) > X_test[i][look_back-1]) or ((output[i][0] + pipSecure) < X_test[i][look_back-1]):
+        if (Y_test[i] > X_test[i][look_back-1] and (output[i][0]-pipSecure) > X_test[i][look_back-1]) or (Y_test[i] < X_test[i][look_back-1] and (output[i][0]+pipSecure) < X_test[i][look_back-1]):
+         win = win + 1
+         numTrades = numTrades + 1
+        else:
+            loss = loss + 1
+            numTrades = numTrades + 1
+
+accuracy = float(win)/float(numTrades)
+print("accuracy is:")
+print(accuracy*100)
+print("number of trades")
+print(numTrades)
 plt.show()
