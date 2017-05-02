@@ -36,7 +36,7 @@ data['price']  # as a Series
 data['price'].values
 
 
-samples = data['price'].values[1200:2401]
+samples = data['price'].values[2499:3601]
 samples = samples.astype('float32')
 look_back = 30
 prediction_lag = 60
@@ -55,7 +55,7 @@ samples = scaler.fit_transform(samples)
 
 
 
-# convert an array of values into a X-train matrix
+# convert an array of values into a train matrix
 def create_dataset(dataset, look_back):
     dataX, dataY = [], []
     for i in range(len(dataset)-look_back-1-prediction_lag):
@@ -141,7 +141,7 @@ inputs = tflow.placeholders.prediction.input_placeholder(input_size)
 
 input_lstm_layer = tflow.layers.InputLSTMLayer(inputs, input_size)
 lstm_layer = tflow.layers.LSTMLayer(input_size, output_size, input_lstm_layer)
-#nn_layer = tflow.layers.MultiNNLayer(hidden_size4, output_size, lstm_layer, layers=5, layer_size=[1,1,1,1,1], func='sigmoid', outfunc='regression')
+#nn_layer = tflow.layers.MultiNNLayer(hidden_size4, output_size, lstm_layer)
 #outlstm_layer1 = tflow.layers.OutputLSTMLayer(output_size, lstm_layer, batch_output=False)
 #reg_layer = tflow.layers.RegressionLayer(hidden_size, output_size, lstm_layer)
 #input_lstm_layer2 = tflow.layers.InputLSTMLayer(outlstm_layer1.get_outputs(), hidden_size2)
@@ -203,21 +203,22 @@ regr = linear_model.LinearRegression()
 win = 0;
 loss = 0
 numTrades = 0
-for i in range(len(Y_test)-1-15):
+for i in range(len(Y_test)-1-prediction_lag):
 
-    buy_data = output[i:(i+15)][:,0]
-    time_interval = list(range(0,15))
+    buy_data = output[i:(i+prediction_lag)][:,0]
+    time_interval = list(range(0,prediction_lag))
     x1 = np.array(time_interval).reshape(len(time_interval), 1)
     y1 = np.array(buy_data).reshape(len(buy_data), 1)
-    print(len(buy_data), len(time_interval))
+    #print(len(buy_data), len(time_interval))
     regr.fit(x1, y1)
-    print('Coefficients: \n', regr.coef_[0][0])
+    #print('Coefficients: \n', regr.coef_[0][0])
     slope_buy = regr.coef_[0][0]
-    print("interval data")
+    #print("interval data")
 
     pipSecure = 0.0004
+    slopeSecure = 0.1
     if ((output[i][0] - pipSecure) > X_test[i][look_back-1]) or ((output[i][0] + pipSecure) < X_test[i][look_back-1]):
-        if (Y_test[i] > X_test[i][look_back-1] and (output[i][0]-pipSecure > X_test[i][look_back-1] or slope_buy > 0)) or (Y_test[i] < X_test[i][look_back-1] and (output[i][0]+pipSecure < X_test[i][look_back-1] or slope_buy < 0)):
+        if (Y_test[i] > X_test[i][look_back-1] and (output[i][0]-pipSecure > X_test[i][look_back-1] or slope_buy > slopeSecure)) or (Y_test[i] < X_test[i][look_back-1] and (output[i][0]+pipSecure < X_test[i][look_back-1]) or slope_buy < slopeSecure):
          win = win + 1
          numTrades = numTrades + 1
         else:
